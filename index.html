@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="SoulPet — A living 2D virtual pet with an emotional AI engine, memory system, and adaptive personality. Watch your pet grow and evolve." />
+  <title>SoulPet — Your Living Companion</title>
+
+  <!-- Google Fonts: Nunito (friendly, rounded) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- =====================================================
+       WELCOME MODAL — shown on first launch
+  ====================================================== -->
+  <div id="welcome-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
+    <div class="modal-card welcome-card">
+      <div class="welcome-emoji">🐾</div>
+      <h1 id="welcome-title" class="welcome-title">Welcome to SoulPet</h1>
+      <p class="welcome-sub">Your new companion is waiting. Give them a name.</p>
+      <input
+        id="pet-name-input"
+        class="name-input"
+        type="text"
+        maxlength="16"
+        placeholder="Enter a name…"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <button id="start-btn" class="btn btn-primary btn-large">
+        Meet Your Pet ✨
+      </button>
+    </div>
+  </div>
+
+  <!-- =====================================================
+       JOURNAL MODAL — memory & history
+  ====================================================== -->
+  <div id="journal-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="journal-title">
+    <div class="modal-card journal-card">
+      <div class="journal-header">
+        <h2 id="journal-title">📖 Pet Journal</h2>
+        <button id="close-journal" class="btn-icon" aria-label="Close journal">✕</button>
+      </div>
+      <div class="journal-body" id="journal-body">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================
+       MAIN APP SHELL
+  ====================================================== -->
+  <div id="app" class="app-shell">
+
+    <!-- TOP BAR -->
+    <header class="top-bar" role="banner">
+      <div class="top-bar__left">
+        <span class="logo">🐾 SoulPet</span>
+        <span id="pet-name-display" class="pet-name-display">Pip</span>
+      </div>
+      <div class="top-bar__right">
+        <span id="day-counter"  class="badge">Day 1</span>
+        <span id="time-of-day" class="badge badge--time">🌤️ Day</span>
+      </div>
+    </header>
+
+    <!-- GAME CANVAS AREA -->
+    <main class="game-area" role="main">
+      <canvas id="game-canvas" aria-label="SoulPet 2D game world"></canvas>
+
+      <!-- SPEECH BUBBLE (floats above pet) -->
+      <div id="speech-bubble" class="speech-bubble hidden" aria-live="polite">
+        <span id="speech-text"></span>
+      </div>
+    </main>
+
+    <!-- STAT PANEL -->
+    <aside class="stat-panel" aria-label="Pet stats">
+      <div class="stat-row">
+        <span class="stat-label">😊 Mood</span>
+        <div class="stat-bar-track" role="progressbar" aria-labelledby="stat-happiness-label" aria-valuenow="70" aria-valuemin="0" aria-valuemax="100">
+          <div id="bar-happiness" class="stat-bar stat-bar--happiness" style="width:70%"></div>
+        </div>
+        <span id="stat-happiness-val" class="stat-value">70</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">🍖 Hunger</span>
+        <div class="stat-bar-track" role="progressbar" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100">
+          <div id="bar-hunger" class="stat-bar stat-bar--hunger" style="width:20%"></div>
+        </div>
+        <span id="stat-hunger-val" class="stat-value">20</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">⚡ Energy</span>
+        <div class="stat-bar-track" role="progressbar" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100">
+          <div id="bar-energy" class="stat-bar stat-bar--energy" style="width:80%"></div>
+        </div>
+        <span id="stat-energy-val" class="stat-value">80</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">💜 Trust</span>
+        <div class="stat-bar-track" role="progressbar" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100">
+          <div id="bar-trust" class="stat-bar stat-bar--trust" style="width:50%"></div>
+        </div>
+        <span id="stat-trust-val" class="stat-value">50</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">🫂 Social</span>
+        <div class="stat-bar-track" role="progressbar" aria-valuenow="70" aria-valuemin="0" aria-valuemax="100">
+          <div id="bar-loneliness" class="stat-bar stat-bar--loneliness" style="width:70%"></div>
+        </div>
+        <span id="stat-loneliness-val" class="stat-value">70</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">🔭 Curious</span>
+        <div class="stat-bar-track" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100">
+          <div id="bar-curiosity" class="stat-bar stat-bar--curiosity" style="width:60%"></div>
+        </div>
+        <span id="stat-curiosity-val" class="stat-value">60</span>
+      </div>
+
+      <!-- PERSONALITY BADGES -->
+      <div class="personality-row" aria-label="Active personality traits">
+        <span class="section-label">Personality</span>
+        <div id="personality-badges" class="badge-group">
+          <!-- Populated by JS -->
+          <span class="trait-badge">Curious</span>
+        </div>
+      </div>
+
+      <!-- MOOD LABEL -->
+      <div class="mood-display">
+        Mood: <span id="mood-label" class="mood-label">Neutral</span>
+      </div>
+    </aside>
+
+    <!-- ACTION BUTTONS -->
+    <nav class="action-bar" role="navigation" aria-label="Pet actions">
+      <button id="btn-feed"    class="btn btn-action" data-action="feed"    aria-label="Feed your pet">
+        <span class="btn-icon-emoji">🍖</span><span>Feed</span>
+      </button>
+      <button id="btn-play"    class="btn btn-action" data-action="play"    aria-label="Play with your pet">
+        <span class="btn-icon-emoji">🎾</span><span>Play</span>
+      </button>
+      <button id="btn-talk"    class="btn btn-action" data-action="talk"    aria-label="Talk to your pet">
+        <span class="btn-icon-emoji">💬</span><span>Talk</span>
+      </button>
+      <button id="btn-sleep"   class="btn btn-action" data-action="sleep"   aria-label="Put your pet to sleep">
+        <span class="btn-icon-emoji">💤</span><span>Sleep</span>
+      </button>
+      <button id="btn-clean"   class="btn btn-action" data-action="clean"   aria-label="Clean your pet">
+        <span class="btn-icon-emoji">🛁</span><span>Clean</span>
+      </button>
+      <button id="btn-journal" class="btn btn-action btn-action--journal" data-action="journal" aria-label="Open pet journal">
+        <span class="btn-icon-emoji">📖</span><span>Journal</span>
+      </button>
+    </nav>
+
+  </div><!-- /app-shell -->
+
+  <!-- =====================================================
+       NOTIFICATION TOAST
+  ====================================================== -->
+  <div id="toast" class="toast hidden" role="alert" aria-live="assertive">
+    <span id="toast-text"></span>
+  </div>
+
+  <!-- JS Modules -->
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
