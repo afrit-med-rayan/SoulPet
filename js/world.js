@@ -90,14 +90,29 @@ export class World {
     const w = canvas.width;
     const h = canvas.height;
 
+    // Get continuous time (0-24) to allow smooth shifts
+    const d = new Date();
+    const time = d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
+
     // 1. Sky
-    const skyGradient = this._getSkyGradient(hourOfDay, h);
-    ctx.fillStyle = skyGradient;
+    const stops = this._getSkyGradientStops(time);
+    const grad = ctx.createLinearGradient(0, 0, 0, h * 0.8);
+    grad.addColorStop(0, stops.top);
+    grad.addColorStop(1, stops.bottom);
+    ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
 
-    // 2. Stars (only visible at night loosely)
-    if (hourOfDay < 6 || hourOfDay >= 18) {
-      this._drawStars(ctx);
+    // 2. Stars (visible mostly at night)
+    // Smooth alpha for stars
+    let starMasterAlpha = 0;
+    if (time < 6 || time > 18) {
+      if (time > 18 && time <= 20) starMasterAlpha = (time - 18) / 2; // fade in dusk
+      else if (time >= 4 && time < 6) starMasterAlpha = 1 - (time - 4) / 2; // fade out dawn
+      else starMasterAlpha = 1; // full night
+    }
+    
+    if (starMasterAlpha > 0) {
+      this._drawStars(ctx, starMasterAlpha);
     }
 
     // 3. Clouds
@@ -110,10 +125,10 @@ export class World {
     this._drawTrees(ctx, h);
   }
 
-  _drawStars(ctx) {
+  _drawStars(ctx, masterAlpha) {
     ctx.fillStyle = 'white';
     for (const star of this.stars) {
-      ctx.globalAlpha = star.alpha;
+      ctx.globalAlpha = star.alpha * masterAlpha;
       ctx.beginPath();
       ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
       ctx.fill();
@@ -186,29 +201,37 @@ export class World {
     }
   }
 
-  /** Returns a sky gradient based on hour 0–23. */
-  _getSkyGradient(hourOfDay, h) {
-    // Basic day/night mapping for step 1
-    const grad = this.ctx.createLinearGradient(0, 0, 0, h * 0.8);
+  /** Gets smoothly interpolated sky colors based on time (0-24). */
+  _getSkyGradientStops(time) {
+    const phases = [
+      { t: 0,  top: [10, 10, 26], bottom: [26, 26, 58] },     // Midnight
+      { t: 5,  top: [26, 26, 58], bottom: [255, 126, 95] },   // Dawn start
+      { t: 8,  top: [79, 172, 254], bottom: [0, 242, 254] },  // Day
+      { t: 18, top: [79, 172, 254], bottom: [0, 242, 254] },  // Day end
+      { t: 20, top: [255, 126, 95], bottom: [47, 27, 65] },   // Dusk
+      { t: 22, top: [10, 10, 26], bottom: [26, 26, 58] },     // Night start
+      { t: 24, top: [10, 10, 26], bottom: [26, 26, 58] }      // Midnight
+    ];
+
+    let p1 = phases[0];
+    let p2 = phases[1];
     
-    if (hourOfDay >= 5 && hourOfDay < 8) {
-      // Dawn
-      grad.addColorStop(0, '#1a1a3a');
-      grad.addColorStop(1, '#ff7e5f');
-    } else if (hourOfDay >= 8 && hourOfDay < 18) {
-      // Day
-      grad.addColorStop(0, '#4facfe');
-      grad.addColorStop(1, '#00f2fe');
-    } else if (hourOfDay >= 18 && hourOfDay < 21) {
-      // Dusk
-      grad.addColorStop(0, '#ff7e5f');
-      grad.addColorStop(1, '#2f1b41');
-    } else {
-      // Night
-      grad.addColorStop(0, '#0a0a1a');
-      grad.addColorStop(1, '#1a1a3a');
+    for (let i = 0; i < phases.length - 1; i++) {
+      if (time >= phases[i].t && time <= phases[i+1].t) {
+        p1 = phases[i];
+        p2 = phases[i+1];
+        break;
+      }
     }
 
-    return grad;
+    const range = p2.t - p1.t;
+    const progress = range === 0 ? 0 : (time - p1.t) / range;
+
+    const lerp = (c1, c2, p) => Math.round(c1 + (c2 - c1) * p);
+    
+    return {
+      top: \`rgb(\${lerp(p1.top[0], p2.top[0], progress)}, \${lerp(p1.top[1], p2.top[1], progress)}, \${lerp(p1.top[2], p2.top[2], progress)})\`,
+      bottom: \`rgb(\${lerp(p1.bottom[0], p2.bottom[0], progress)}, \${lerp(p1.bottom[1], p2.bottom[1], progress)}, \${lerp(p1.bottom[2], p2.bottom[2], progress)})\`
+    };
   }
 }
