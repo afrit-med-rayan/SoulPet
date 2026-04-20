@@ -47,7 +47,9 @@ export class World {
         x: Math.random() * w,
         y: Math.random() * (h * 0.6),
         radius: 0.5 + Math.random() * 1.5,
-        alpha: Math.random()
+        alpha: Math.random(),
+        twinkleSpeed: 0.5 + Math.random() * 2,
+        twinkleTime: Math.random() * Math.PI * 2
       });
     }
   }
@@ -66,7 +68,20 @@ export class World {
 
   /** @param {number} dt — delta time in seconds */
   update(dt) { 
-    // TODO: Animate clouds and stars (Phase 3 Step 2)
+    // Animate clouds
+    for (const cloud of this.clouds) {
+      cloud.x += cloud.speed * dt;
+      if (cloud.x > this.canvas.width + 100) {
+        cloud.x = -100;
+        cloud.y = Math.random() * (this.canvas.height * 0.4);
+      }
+    }
+
+    // Animate stars
+    for (const star of this.stars) {
+      star.twinkleTime += star.twinkleSpeed * dt;
+      star.alpha = 0.5 + 0.5 * Math.sin(star.twinkleTime);
+    }
   }
 
   /** Render the full background scene. */
