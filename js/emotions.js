@@ -78,7 +78,13 @@ export class EmotionEngine {
       this.energy   = this._clamp(this.energy     - 2.0 * t);  // tires during day
     }
 
-    this.happiness  = this._clamp(this.happiness  - 1.0 * t);  // drifts to neutral
+    // Happiness drifts towards neutral (50)
+    if (this.happiness > 50) {
+      this.happiness = this._clamp(this.happiness - 1.0 * t);
+    } else if (this.happiness < 50) {
+      this.happiness = this._clamp(this.happiness + 1.0 * t);
+    }
+
     this.loneliness = this._clamp(this.loneliness + 2.5 * t);  // grows without interaction
     this.trust      = this._clamp(this.trust      - 0.5 * t);  // very slow erosion
     this.curiosity  = this._clamp(this.curiosity  - 1.0 * t);  // fades without play
