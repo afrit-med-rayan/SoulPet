@@ -83,6 +83,15 @@ export class MemorySystem {
   }
 
   // ═══════════════════════════════════════════════
+  //  Playtime Tracking
+  // ═══════════════════════════════════════════════
+
+  /** @param {number} dt delta time in seconds */
+  tick(dt) {
+    this.total_playtime_ms += dt * 1000;
+  }
+
+  // ═══════════════════════════════════════════════
   //  Derived helpers
   // ═══════════════════════════════════════════════
 
@@ -94,6 +103,11 @@ export class MemorySystem {
   /** Formatted date string of first meeting. */
   getFirstMetDate() {
     return new Date(this.first_met).toLocaleDateString();
+  }
+
+  /** Total active playtime in minutes. */
+  getTotalPlaytimeMinutes() {
+    return Math.floor(this.total_playtime_ms / (1000 * 60));
   }
 
   /** Returns the activity the user has done most often. */

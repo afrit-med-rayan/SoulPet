@@ -39,6 +39,11 @@ export class Game {
     this.personality = new PersonalitySystem();
     this.evolution   = new EvolutionSystem();
 
+    // Apply neglect penalty on load if there were days ignored
+    if (this.memory.days_ignored > 0) {
+      this.emotions.penalizeNeglect(this.memory.days_ignored);
+    }
+
     // ── Rendering systems ─────────────────────────
     this.world = new World(this.ctx, this.canvas);
     this.pet   = new Pet(this.ctx, this.canvas, save?.petName ?? 'Pip');
@@ -226,10 +231,11 @@ export class Game {
     }
 
     // ── Subsystem updates ─────────────────────────
-    // world, pet, ai all receive dt for their own internal timers
+    // world, pet, ai, memory all receive dt for their own internal timers
     this.world.update(dt);
     this.pet.update(dt);
     this.ai.update(dt);
+    this.memory.tick(dt);
   }
 
   // ═══════════════════════════════════════════════

@@ -237,6 +237,7 @@ function populateJournal(snapshot) {
     ['📅 First Met',       m.first_met ? new Date(m.first_met).toLocaleDateString() : '—'],
     ['📆 Days Alive',      `${Math.floor((Date.now() - (m.first_met ?? Date.now())) / 86400000)}`],
     ['🔄 Sessions',        m.session_count ?? 1],
+    ['⏳ Total Playtime',  `${Math.floor((m.total_playtime_ms ?? 0) / 60000)} min`],
     ['🍖 Times Fed',       m.times_fed     ?? 0],
     ['🎾 Times Played',    m.times_played  ?? 0],
     ['💬 Times Talked',    m.times_talked  ?? 0],

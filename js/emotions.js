@@ -17,8 +17,17 @@ export class EmotionEngine {
   }
 
   // ═══════════════════════════════════════════════
-  //  Interaction Methods
+  //  Interaction Methods & Penalties
   // ═══════════════════════════════════════════════
+
+  /** Apply penalty for days ignored offline. */
+  penalizeNeglect(days) {
+    if (days <= 0) return;
+    this.happiness  = this._clamp(this.happiness  - 10 * days);
+    this.loneliness = this._clamp(this.loneliness + 15 * days);
+    this.trust      = this._clamp(this.trust      - 5 * days);
+    this.hunger     = this._clamp(this.hunger     + 15 * days);
+  }
 
   feed() {
     this.hunger     = this._clamp(this.hunger     - 25);
