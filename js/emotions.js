@@ -62,13 +62,22 @@ export class EmotionEngine {
    * Apply time-based drift to all stats.
    * Rates scaled per 30-second tick (tuned for ~8-hour "day").
    * @param {number} elapsedSeconds — actual seconds since last tick
+   * @param {number} hourOfDay — current hour (0-23) for day/night aware decay
    */
-  tick(elapsedSeconds) {
+  tick(elapsedSeconds, hourOfDay = 12) {
     // Normalise to a standard 30-second unit so decay is predictable
     const t = elapsedSeconds / 30;
 
     this.hunger     = this._clamp(this.hunger     + 3.0 * t);  // always grows
-    this.energy     = this._clamp(this.energy     - 2.0 * t);  // tires over time
+    
+    // Day/Night Energy adaptation
+    const isNight = (hourOfDay >= 21 || hourOfDay < 6);
+    if (isNight) {
+      this.energy   = this._clamp(this.energy     + 3.5 * t);  // restores at night
+    } else {
+      this.energy   = this._clamp(this.energy     - 2.0 * t);  // tires during day
+    }
+
     this.happiness  = this._clamp(this.happiness  - 1.0 * t);  // drifts to neutral
     this.loneliness = this._clamp(this.loneliness + 2.5 * t);  // grows without interaction
     this.trust      = this._clamp(this.trust      - 0.5 * t);  // very slow erosion
