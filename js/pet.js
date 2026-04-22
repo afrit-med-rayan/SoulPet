@@ -38,6 +38,9 @@ export class Pet {
     this.earAngle    = 0;
     this.mouthOpen   = 0;
     this.glow        = 0;
+
+    // Override animation (triggered by button interactions)
+    this._overrideTimer = 0;
     
     // Smooth target parameters
     this._tBob = 0;
@@ -53,14 +56,26 @@ export class Pet {
     this.particles = [];
   }
 
-  /** Set the visual state (from EvolutionSystem). */
+  /** Set the visual state (from EvolutionSystem). Blocked while a triggered animation is playing. */
   setState(state) {
+    if (this._overrideTimer > 0) return; // let button-triggered animation finish
     if (this.state !== state) {
       if (state === 'sleepy') this.spawnParticles('Zzz');
-      if (state === 'sad') this.spawnParticles('tear');
-      this.state   = state;
+      if (state === 'sad')    this.spawnParticles('tear');
+      this.state    = state;
       this.animTime = 0;
     }
+  }
+
+  /**
+   * Temporarily force a visual state for button feedback, then yield back to evolution.
+   * @param {string} state  — animation state to play
+   * @param {number} durationSec — how long to hold it (seconds)
+   */
+  triggerAnimation(state, durationSec = 2) {
+    this.state          = state;
+    this.animTime       = 0;
+    this._overrideTimer = durationSec;
   }
 
   /** Move toward a target position. */
@@ -85,8 +100,13 @@ export class Pet {
   }
 
   /** @param {number} dt */
-  update(dt) { 
+  update(dt) {
     this.animTime += dt;
+
+    // Countdown override timer; once it expires the next setState() call will resume
+    if (this._overrideTimer > 0) {
+      this._overrideTimer -= dt;
+    }
     
     // 1. Particle Logic
     for (let i = this.particles.length - 1; i >= 0; i--) {
@@ -240,6 +260,14 @@ export class Pet {
         ctx.beginPath();
         ctx.arc(p.x, p.y, 2 + Math.random() * 2, 0, Math.PI * 2);
         ctx.fill();
+      } else if (p.type === 'heart') {
+        ctx.fillStyle = '#ec4899';
+        ctx.font = '16px sans-serif';
+        ctx.fillText('♥', p.x, p.y);
+      } else if (p.type === 'star') {
+        ctx.fillStyle = '#fbbf24';
+        ctx.font = '16px sans-serif';
+        ctx.fillText('★', p.x, p.y);
       }
     }
     ctx.globalAlpha = 1.0;

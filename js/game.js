@@ -92,15 +92,39 @@ export class Game {
    */
   interact(action) {
     switch (action) {
-      case 'feed':  this.emotions.feed();  this.memory.record('feed');  break;
-      case 'play':  this.emotions.play();  this.memory.record('play');  break;
-      case 'talk':  this.emotions.talk();  this.memory.record('talk');  break;
-      case 'sleep': this.emotions.sleep(); this.memory.record('sleep'); break;
-      case 'clean': this.emotions.clean(); this.memory.record('clean'); break;
+      case 'feed':
+        this.emotions.feed();
+        this.memory.record('feed');
+        this.pet.triggerAnimation('eating', 2.5);
+        this.pet.spawnParticles('heart');
+        break;
+      case 'play':
+        this.emotions.play();
+        this.memory.record('play');
+        this.pet.triggerAnimation('playing', 2.5);
+        this.pet.spawnParticles('star');
+        break;
+      case 'talk':
+        this.emotions.talk();
+        this.memory.record('talk');
+        this.pet.spawnParticles('heart');
+        break;
+      case 'sleep':
+        this.emotions.sleep();
+        this.memory.record('sleep');
+        this.pet.triggerAnimation('sleepy', 3.0);
+        this.pet.spawnParticles('Zzz');
+        break;
+      case 'clean':
+        this.emotions.clean();
+        this.memory.record('clean');
+        this.pet.spawnParticles('sparkle');
+        break;
       default:
         console.warn('[SoulPet] Unknown action:', action);
         return;
     }
+    // _syncEvolution calls pet.setState() which respects the override timer
     this._syncEvolution();
     this.save();
     this._dispatchStateChange();
@@ -215,7 +239,7 @@ export class Game {
   /** @param {number} elapsed — actual seconds elapsed (may be slightly > 30) */
   _slowTick(elapsed) {
     // Passive emotion decay
-    this.emotions.tick(elapsed);
+    this.emotions.tick(elapsed, this.hourOfDay);
 
     // Sync visual state and personality
     this._syncEvolution();
