@@ -270,13 +270,56 @@ body::before {
 .trait-badge {
   font-size: 0.65rem;
   font-weight: 800;
-  padding: 3px 9px;
+  padding: 3px 10px;
   border-radius: var(--radius-xl);
-  background: linear-gradient(135deg, var(--clr-purple), var(--clr-cyan));
   color: #fff;
   letter-spacing: 0.3px;
   animation: badge-appear var(--dur-mid) var(--ease-bounce);
+  /* default fallback */
+  background: linear-gradient(135deg, var(--clr-purple), var(--clr-cyan));
+  box-shadow: 0 0 8px rgba(124,58,237,0.35);
+  transition: transform var(--dur-fast) var(--ease-bounce),
+              box-shadow var(--dur-fast) var(--ease-smooth);
 }
+.trait-badge:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 14px rgba(255,255,255,0.2);
+}
+
+/* ── Per-trait color palette ──────────────────────── */
+.trait-badge[data-trait="affectionate"] {
+  background: linear-gradient(135deg, #ec4899, #f9a8d4);
+  box-shadow: 0 0 8px rgba(236,72,153,0.40);
+}
+.trait-badge[data-trait="playful"] {
+  background: linear-gradient(135deg, #f59e0b, #fcd34d);
+  box-shadow: 0 0 8px rgba(245,158,11,0.40);
+  color: #1a1a1a;
+}
+.trait-badge[data-trait="curious"] {
+  background: linear-gradient(135deg, #10b981, #6ee7b7);
+  box-shadow: 0 0 8px rgba(16,185,129,0.40);
+}
+.trait-badge[data-trait="shy"] {
+  background: linear-gradient(135deg, #818cf8, #c7d2fe);
+  box-shadow: 0 0 8px rgba(129,140,248,0.40);
+  color: #1a1a1a;
+}
+.trait-badge[data-trait="energetic"] {
+  background: linear-gradient(135deg, #06b6d4, #67e8f9);
+  box-shadow: 0 0 8px rgba(6,182,212,0.40);
+  color: #1a1a1a;
+}
+.trait-badge[data-trait="mischievous"] {
+  background: linear-gradient(135deg, #f97316, #fdba74);
+  box-shadow: 0 0 8px rgba(249,115,22,0.40);
+  color: #1a1a1a;
+}
+.trait-badge[data-trait="withdrawn"] {
+  background: linear-gradient(135deg, #475569, #94a3b8);
+  box-shadow: 0 0 8px rgba(71,85,105,0.40);
+}
+
 @keyframes badge-appear {
   from { opacity: 0; transform: scale(0.6); }
   to   { opacity: 1; transform: scale(1);   }

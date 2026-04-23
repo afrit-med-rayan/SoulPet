@@ -171,16 +171,27 @@ function updateUI(snapshot) {
   // Mood label
   if (game) moodLabel.textContent = game.emotions.getOverallMood();
 
-  // Personality badges
+  // Personality badges (with per-trait color via data-trait attribute)
   if (activeTraits) {
     personalityBadges.innerHTML = '';
     if (activeTraits.length === 0) {
-      personalityBadges.innerHTML = '<span class="trait-badge">Mysterious</span>';
+      const span = document.createElement('span');
+      span.className = 'trait-badge';
+      span.dataset.trait = 'mysterious';
+      span.textContent = 'Mysterious';
+      personalityBadges.appendChild(span);
     } else {
+      // Grab scores for tooltip display
+      const scores = game?.personality?.traitScores ?? {};
       activeTraits.forEach(trait => {
         const span = document.createElement('span');
-        span.className   = 'trait-badge';
-        span.textContent = trait.charAt(0).toUpperCase() + trait.slice(1);
+        span.className       = 'trait-badge';
+        span.dataset.trait   = trait;                                  // CSS hook
+        span.textContent     = trait.charAt(0).toUpperCase() + trait.slice(1);
+        const score = scores[trait];
+        if (score !== undefined) {
+          span.title = `${trait}: ${Math.round(score)}/100`;          // tooltip
+        }
         personalityBadges.appendChild(span);
       });
     }
