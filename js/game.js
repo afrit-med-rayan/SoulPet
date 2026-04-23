@@ -36,7 +36,7 @@ export class Game {
     // ── Core systems ──────────────────────────────
     this.emotions    = new EmotionEngine(save?.emotions);
     this.memory      = new MemorySystem(save?.memory);
-    this.personality = new PersonalitySystem();
+    this.personality = new PersonalitySystem(save?.personality?.traitScores);
     this.evolution   = new EvolutionSystem();
 
     // Apply neglect penalty on load if there were days ignored
