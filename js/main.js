@@ -241,8 +241,11 @@ export function showToast(text, duration = 3500) {
 // ─────────────────────────────────────────────────
 
 function populateJournal(snapshot) {
-  const m = snapshot.memory ?? {};
+  const m      = snapshot.memory ?? {};
+  const scores = game?.personality?.traitScores ?? {};
+  const active = new Set(snapshot.activeTraits ?? []);
 
+  // ── General entries ──────────────────────────────
   const entries = [
     ['🐾 Pet Name',        snapshot.petName ?? 'Pip'],
     ['📅 First Met',       m.first_met ? new Date(m.first_met).toLocaleDateString() : '—'],
@@ -256,17 +259,51 @@ function populateJournal(snapshot) {
     ['🛁 Times Cleaned',   m.times_cleaned ?? 0],
     ['⭐ Fav Activity',    m.favorite_activity ?? 'none'],
     ['😴 Days Ignored',    m.days_ignored  ?? 0],
-    ['🧬 Personality',     (snapshot.activeTraits ?? []).join(', ') || 'Mysterious'],
     ['💜 Current Mood',    game ? game.emotions.getOverallMood() : '—'],
   ];
 
-  journalBody.innerHTML = entries.map(([key, val]) => `
+  const entriesHtml = entries.map(([key, val]) => `
     <div class="journal-entry">
       <span class="journal-entry__key">${key}</span>
       <span class="journal-entry__val">${val}</span>
     </div>
   `).join('');
+
+  // ── Personality breakdown section ────────────────
+  const TRAIT_META = {
+    affectionate: { emoji: '💗', label: 'Affectionate' },
+    playful:      { emoji: '🎾', label: 'Playful'      },
+    curious:      { emoji: '🔭', label: 'Curious'      },
+    shy:          { emoji: '🫣', label: 'Shy'          },
+    energetic:    { emoji: '⚡', label: 'Energetic'    },
+    mischievous:  { emoji: '😈', label: 'Mischievous'  },
+    withdrawn:    { emoji: '🌑', label: 'Withdrawn'    },
+  };
+
+  const traitRows = Object.entries(TRAIT_META).map(([trait, { emoji, label }]) => {
+    const score   = Math.round(scores[trait] ?? 0);
+    const isActive = active.has(trait);
+    return `
+      <div class="journal-trait-row ${isActive ? 'journal-trait-row--active' : ''}">
+        <span class="journal-trait-label">
+          ${emoji} ${label}
+          ${isActive ? '<span class="trait-badge trait-badge--sm" data-trait="' + trait + '">Active</span>' : ''}
+        </span>
+        <div class="journal-trait-bar-track">
+          <div class="journal-trait-bar" data-trait="${trait}" style="width:${score}%"></div>
+        </div>
+        <span class="journal-trait-score">${score}</span>
+      </div>
+    `;
+  }).join('');
+
+  journalBody.innerHTML = `
+    ${entriesHtml}
+    <div class="journal-section-header">🧬 Personality Breakdown</div>
+    <div class="journal-traits">${traitRows}</div>
+  `;
 }
+
 
 // ─────────────────────────────────────────────────
 //  Boot
