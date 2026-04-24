@@ -1,6 +1,6 @@
 // =============================================
-// pet.js — Pet Entity (Canvas 2D)
-// Drawn entirely via Canvas API — no images.
+// pet.js — Pet Entity (Pixel Art)
+// Drawn via an offscreen 16x24 canvas, upscaled.
 // Handles: drawing, animation states, wandering
 // =============================================
 
@@ -16,8 +16,10 @@ export class Pet {
     this.name   = name;
 
     // Position (centre of pet)
-    this.x = canvas.width  / 2;
-    this.y = canvas.height / 2;
+    this.x = Math.floor(canvas.width / 2);
+    this.y = Math.floor(canvas.height / 2);
+    this._trueX = this.x;
+    this._trueY = this.y;
 
     // Movement / Wandering
     this.targetX = this.x;
@@ -28,30 +30,20 @@ export class Pet {
     // Animation / State
     this.state       = 'idle'; // idle|happy|sad|sleepy|excited|eating|playing|hungry
     this.animTime    = 0;
-    
-    // Draw Parameters (smoothed via lerp)
-    this.bobOffset   = 0;
-    this.scaleX      = 1;
-    this.scaleY      = 1;
-    this.rotation    = 0;
-    this.eyeOpenness = 1;
-    this.earAngle    = 0;
-    this.mouthOpen   = 0;
-    this.glow        = 0;
 
+    // Pixel Sprite Setup
+    this.spriteW = 16;
+    this.spriteH = 24;
+    this.scale   = 6; // Upscale factor (96x144 on screen)
+    
+    this.offCanvas = document.createElement('canvas');
+    this.offCanvas.width = this.spriteW;
+    this.offCanvas.height = this.spriteH;
+    this.offCtx = this.offCanvas.getContext('2d');
+    
     // Override animation (triggered by button interactions)
     this._overrideTimer = 0;
     
-    // Smooth target parameters
-    this._tBob = 0;
-    this._tScaleX = 1;
-    this._tScaleY = 1;
-    this._tRot = 0;
-    this._tEye = 1;
-    this._tEar = 0;
-    this._tMouth = 0;
-    this._tGlow = 0;
-
     // Particles
     this.particles = [];
   }
@@ -80,8 +72,8 @@ export class Pet {
 
   /** Move toward a target position. */
   setTarget(x, y) {
-    this.targetX = x;
-    this.targetY = y;
+    this.targetX = Math.floor(x);
+    this.targetY = Math.floor(y);
   }
 
   /** Spawn a burst of particles. */
@@ -103,7 +95,6 @@ export class Pet {
   update(dt) {
     this.animTime += dt;
 
-    // Countdown override timer; once it expires the next setState() call will resume
     if (this._overrideTimer > 0) {
       this._overrideTimer -= dt;
     }
@@ -126,108 +117,40 @@ export class Pet {
     this.wanderTimer -= dt;
     if (this.wanderTimer <= 0) {
       this.wanderTimer = 3 + Math.random() * 5; // next wander in 3-8s
-      // Only wander if not sleeping
       if (this.state !== 'sleepy') {
         const margin = 50;
-        this.targetX = margin + Math.random() * (this.canvas.width - margin * 2);
+        this.targetX = Math.floor(margin + Math.random() * (this.canvas.width - margin * 2));
       }
     }
 
-    // Move towards target
+    // Move towards target (Pixel Snap)
     const dx = this.targetX - this.x;
     const dy = this.targetY - this.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     
     if (dist > 2) {
-      // Scale speed based on mood
       let currentSpeed = this.speed;
       if (this.state === 'sad') currentSpeed *= 0.5;
       if (this.state === 'excited') currentSpeed *= 1.5;
       if (this.state === 'sleepy') currentSpeed = 0;
 
-      this.x += (dx / dist) * currentSpeed * dt;
-      this.y += (dy / dist) * currentSpeed * dt;
+      // Update true position
+      this._trueX += (dx / dist) * currentSpeed * dt;
+      this._trueY += (dy / dist) * currentSpeed * dt;
+      
+      // Snap visible position to pixels
+      this.x = Math.floor(this._trueX);
+      this.y = Math.floor(this._trueY);
+    } else {
+      this._trueX = this.x;
+      this._trueY = this.y;
     }
-
-    // 3. Animation State Targets
-    const t = this.animTime;
-    
-    // Reset targets to default
-    this._tScaleX = 1;
-    this._tScaleY = 1;
-    this._tRot = 0;
-    this._tEye = 1; // 1 = open, 0 = closed
-    this._tEar = 0; // 0 = up, 1 = droop
-    this._tMouth = 0; // 0 = lines, >0 = open arc
-    this._tGlow = 0;
-
-    switch (this.state) {
-      case 'idle':
-      case 'neutral':
-        this._tBob = Math.sin(t * 3) * 5; 
-        if (Math.random() < 0.005) this._tEye = 0.1; // blink
-        break;
-      case 'happy':
-        this._tBob = Math.abs(Math.sin(t * 6)) * -15; // bouncy jump
-        this._tGlow = 10;
-        this._tEar = Math.sin(t * 6) * 0.2;
-        break;
-      case 'sad':
-        this._tBob = Math.sin(t * 1.5) * 3 + 5; // low bob
-        this._tEar = 1.0; // drooping ears
-        break;
-      case 'sleepy':
-        this._tBob = Math.sin(t * 1) * 2 + 10; // resting lower
-        this._tEye = 0.2; // half closed
-        this._tEar = 0.8;
-        break;
-      case 'excited':
-        this._tBob = Math.sin(t * 15) * 4; // fast wiggle
-        this._tScaleX = 1 + Math.sin(t * 20) * 0.1;
-        this._tGlow = 20;
-        this._tMouth = 1;
-        break;
-      case 'eating':
-        this._tBob = Math.sin(t * 8) * 3;
-        this._tScaleX = 1 + Math.sin(t * 10) * 0.15; // chomping
-        this._tScaleY = 1 - Math.sin(t * 10) * 0.1;
-        this._tMouth = (Math.sin(t * 10) > 0) ? 1 : 0;
-        break;
-      case 'playing':
-        this._tBob = Math.sin(t * 8) * -20;
-        this._tRot = t * 4; // spinning
-        this._tMouth = 0.5;
-        break;
-      case 'hungry':
-        this._tBob = Math.sin(t * 4) * 5;
-        this._tMouth = 0.8;
-        break;
-      default:
-        this._tBob = 0;
-        break;
-    }
-
-    // 4. Lerp actual draw parameters towards targets for smoothness
-    const lerp = (a, b, amt) => a + (b - a) * amt;
-    const lerpFactor = 10 * dt; // speed of transition
-
-    this.bobOffset   = lerp(this.bobOffset, this._tBob, lerpFactor);
-    this.scaleX      = lerp(this.scaleX, this._tScaleX, lerpFactor);
-    this.scaleY      = lerp(this.scaleY, this._tScaleY, lerpFactor);
-    this.eyeOpenness = lerp(this.eyeOpenness, this._tEye, 20 * dt); // fast blink
-    this.earAngle    = lerp(this.earAngle, this._tEar, lerpFactor);
-    this.mouthOpen   = lerp(this.mouthOpen, this._tMouth, lerpFactor);
-    this.glow        = lerp(this.glow, this._tGlow, lerpFactor);
-    
-    // Spin needs special wrap handling or just direct override if playing
-    if (this.state === 'playing') this.rotation = this._tRot;
-    else this.rotation = lerp(this.rotation, 0, lerpFactor);
   }
 
   _getColorForState(state) {
     const colors = {
-      idle: '#f59e0b',    // warm amber
-      happy: '#10b981',   // emerald green
+      idle: '#f59e0b',    // amber
+      happy: '#10b981',   // green
       sad: '#3b82f6',     // blue
       sleepy: '#6366f1',  // indigo
       excited: '#ec4899', // pink
@@ -239,145 +162,153 @@ export class Pet {
     return colors[state] || '#06b6d4';
   }
 
-  /** Draw the pet at current position. */
+  /** Render the pet at current position. */
   render() {
     const { ctx } = this;
     
-    // Draw Particles first (behind)
+    // Draw Particles first (behind or in front, handled here)
+    ctx.imageSmoothingEnabled = false;
     for (const p of this.particles) {
-      ctx.globalAlpha = p.life / p.maxLife;
+      ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+      const px = Math.floor(p.x);
+      const py = Math.floor(p.y);
+      
       if (p.type === 'Zzz') {
-        ctx.fillStyle = 'rgba(255,255,255,0.8)';
-        ctx.font = '14px Nunito, sans-serif';
-        ctx.fillText('Zzz', p.x, p.y);
+        ctx.fillStyle = '#ffffff';
+        // Draw pixel 'Z'
+        ctx.fillRect(px, py, 6, 2);
+        ctx.fillRect(px + 4, py + 2, 2, 2);
+        ctx.fillRect(px + 2, py + 4, 2, 2);
+        ctx.fillRect(px, py + 6, 6, 2);
       } else if (p.type === 'tear') {
         ctx.fillStyle = '#60a5fa';
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fillRect(px, py, 4, 4);
+        ctx.fillRect(px + 1, py - 2, 2, 2);
       } else if (p.type === 'sparkle') {
-        ctx.fillStyle = '#fbbf24';
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 2 + Math.random() * 2, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fillStyle = '#fcd34d';
+        ctx.fillRect(px, py, 4, 4);
       } else if (p.type === 'heart') {
         ctx.fillStyle = '#ec4899';
-        ctx.font = '16px sans-serif';
-        ctx.fillText('♥', p.x, p.y);
+        // Pixel heart
+        ctx.fillRect(px + 2, py, 4, 4);
+        ctx.fillRect(px + 10, py, 4, 4);
+        ctx.fillRect(px, py + 4, 16, 6);
+        ctx.fillRect(px + 2, py + 10, 12, 4);
+        ctx.fillRect(px + 6, py + 14, 4, 4);
       } else if (p.type === 'star') {
         ctx.fillStyle = '#fbbf24';
-        ctx.font = '16px sans-serif';
-        ctx.fillText('★', p.x, p.y);
+        ctx.fillRect(px + 4, py, 4, 4);
+        ctx.fillRect(px, py + 4, 12, 4);
+        ctx.fillRect(px + 4, py + 8, 4, 4);
       }
     }
     ctx.globalAlpha = 1.0;
 
-    ctx.save();
+    // --- DRAW OFFSCREEN PIXEL SPRITE ---
+    this.offCtx.clearRect(0, 0, this.spriteW, this.spriteH);
+    this._drawPixelSprite(this.offCtx, this.state, this.animTime);
+
+    // Calculate bounce offset based on animation time
+    let bob = 0;
+    const t = this.animTime;
     
-    // Translate and Apply Rotation/Scale
-    ctx.translate(this.x, this.y + this.bobOffset);
-    ctx.rotate(this.rotation);
-    ctx.scale(this.scaleX, this.scaleY);
+    if (this.state === 'idle' || this.state === 'neutral') bob = Math.floor(Math.sin(t * 3) * 1);
+    else if (this.state === 'happy') bob = Math.floor(Math.abs(Math.sin(t * 6)) * -3);
+    else if (this.state === 'sad') bob = Math.floor(Math.sin(t * 1.5) * 1 + 1);
+    else if (this.state === 'sleepy') bob = 2;
+    else if (this.state === 'excited') bob = Math.floor(Math.sin(t * 15) * 1);
+    else if (this.state === 'eating') bob = Math.floor(Math.sin(t * 8) * 1);
+    else if (this.state === 'playing') bob = Math.floor(Math.sin(t * 8) * -2);
+    else if (this.state === 'hungry') bob = Math.floor(Math.sin(t * 4) * 1);
 
-    const bodyColor = this._getColorForState(this.state);
+    // Apply scale and draw
+    const drawW = this.spriteW * this.scale;
+    const drawH = this.spriteH * this.scale;
+    const drawX = this.x - drawW / 2;
+    const drawY = this.y - drawH / 2 + (bob * this.scale);
 
-    // 1. Draw Tail
-    ctx.fillStyle = bodyColor;
-    ctx.beginPath();
-    ctx.ellipse(-20, 15, 25, 8, Math.PI / -6, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.drawImage(this.offCanvas, drawX, drawY, drawW, drawH);
+  }
 
-    // 2. Draw Ears
-    ctx.save();
-    // Left ear
-    ctx.translate(-15, -30);
-    ctx.rotate(this.earAngle * -0.5); // droops outwards
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(-10, -20);
-    ctx.lineTo(10, -5);
-    ctx.fill();
-    ctx.restore();
+  /**
+   * Draws the actual 16x24 pixel art onto the given context.
+   */
+  _drawPixelSprite(ctx, state, t) {
+    const color = this._getColorForState(state);
+    
+    // We are drawing in a 16x24 grid.
+    // Center is around x=8, y=12
+    
+    // Default shape:
+    // Base Blob
+    ctx.fillStyle = color;
+    ctx.fillRect(4, 10, 8, 10); // core body
+    ctx.fillRect(3, 11, 10, 8); // wider body
+    ctx.fillRect(2, 13, 12, 6); // even wider base
 
-    ctx.save();
-    // Right ear
-    ctx.translate(15, -30);
-    ctx.rotate(this.earAngle * 0.5); // droops outwards
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(10, -20);
-    ctx.lineTo(-10, -5);
-    ctx.fill();
-    ctx.restore();
-
-    // 3. Draw Body
-    ctx.fillStyle = bodyColor;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 30, 35, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Glow effects
-    if (this.glow > 0) {
-      ctx.shadowColor = bodyColor;
-      ctx.shadowBlur = this.glow;
-      ctx.fill();
-      ctx.shadowBlur = 0;
+    // Ears / Accents depending on state
+    if (state === 'sad') {
+      ctx.fillRect(1, 15, 2, 4); // drooping left
+      ctx.fillRect(13, 15, 2, 4); // drooping right
+    } else if (state === 'sleepy') {
+      ctx.fillRect(2, 16, 2, 3);
+      ctx.fillRect(12, 16, 2, 3);
+    } else {
+      ctx.fillRect(3, 8, 2, 3); // left ear
+      ctx.fillRect(11, 8, 2, 3); // right ear
     }
 
-    // 4. Draw Eyes
+    // Eyes
     ctx.fillStyle = '#ffffff';
-    // Left eye
-    ctx.beginPath();
-    ctx.ellipse(-10, -5, 8, 12 * this.eyeOpenness, 0, 0, Math.PI * 2); 
-    ctx.fill();
-    // Right eye
-    ctx.beginPath();
-    ctx.ellipse(10, -5, 8, 12 * this.eyeOpenness, 0, 0, Math.PI * 2); 
-    ctx.fill();
+    let blink = Math.random() < 0.05 && (state === 'idle' || state === 'neutral');
+    
+    if (state === 'sleepy') {
+      // closed eyes
+      ctx.fillStyle = '#1a1c2c';
+      ctx.fillRect(4, 13, 2, 1);
+      ctx.fillRect(10, 13, 2, 1);
+    } else if (state === 'happy' || state === 'excited') {
+      // big eyes
+      ctx.fillRect(4, 11, 3, 4);
+      ctx.fillRect(9, 11, 3, 4);
+      ctx.fillStyle = '#1a1c2c';
+      ctx.fillRect(5, 12, 1, 2);
+      ctx.fillRect(10, 12, 1, 2);
+    } else if (blink) {
+      // blink
+      ctx.fillStyle = '#1a1c2c';
+      ctx.fillRect(4, 13, 2, 1);
+      ctx.fillRect(10, 13, 2, 1);
+    } else {
+      // normal eyes
+      ctx.fillRect(4, 12, 2, 3);
+      ctx.fillRect(10, 12, 2, 3);
+      ctx.fillStyle = '#1a1c2c';
+      ctx.fillRect(5, 13, 1, 1);
+      ctx.fillRect(10, 13, 1, 1);
+    }
 
-    // Pupils (only draw if open)
-    if (this.eyeOpenness > 0.1) {
-      ctx.fillStyle = '#0a0a1a';
-      ctx.beginPath();
-      ctx.arc(-10, -2, 4, 0, Math.PI * 2);
-      ctx.arc(10, -2, 4, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Eye highlights (sparkling if happy/excited)
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(-12, -4, 2, 0, Math.PI * 2);
-      ctx.arc(8, -4, 2, 0, Math.PI * 2);
-      if (this.state === 'happy' || this.state === 'excited') {
-         ctx.arc(-8, -1, 1, 0, Math.PI * 2);
-         ctx.arc(12, -1, 1, 0, Math.PI * 2);
+    // Mouth
+    ctx.fillStyle = '#1a1c2c';
+    if (state === 'sad') {
+      ctx.fillRect(7, 16, 2, 1);
+      ctx.fillRect(6, 17, 1, 1);
+      ctx.fillRect(9, 17, 1, 1);
+    } else if (state === 'happy' || state === 'excited') {
+      ctx.fillRect(6, 16, 4, 1);
+      ctx.fillRect(7, 17, 2, 2);
+      ctx.fillStyle = '#ec4899'; // tongue
+      ctx.fillRect(7, 18, 2, 1);
+    } else if (state === 'eating') {
+      if (Math.floor(t * 10) % 2 === 0) {
+        ctx.fillRect(6, 16, 4, 3); // open mouth
+      } else {
+        ctx.fillRect(7, 16, 2, 1); // closed
       }
-      ctx.fill();
+    } else if (state === 'hungry') {
+      ctx.fillRect(6, 16, 4, 2); // open wide
     } else {
-      // Draw closed eye lines
-      ctx.strokeStyle = '#0a0a1a';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(-15, -5); ctx.lineTo(-5, -5);
-      ctx.moveTo(5, -5); ctx.lineTo(15, -5);
-      ctx.stroke();
+      ctx.fillRect(7, 16, 2, 1); // normal line
     }
-
-    // 5. Draw Mouth
-    ctx.strokeStyle = '#0a0a1a';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    if (this.mouthOpen > 0.1) {
-      // Open mouth O shape
-      ctx.fillStyle = '#4c1d95';
-      ctx.ellipse(0, 10, 4, 4 * this.mouthOpen, 0, 0, Math.PI * 2);
-      ctx.fill();
-    } else {
-      // Smile arc
-      ctx.arc(0, 10, 5, 0, Math.PI);
-      ctx.stroke();
-    }
-
-    ctx.restore();
   }
 }
