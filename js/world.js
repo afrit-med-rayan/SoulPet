@@ -1,6 +1,6 @@
 // =============================================
-// world.js — 2D Background Scene Renderer
-// Draws sky, ground, clouds, stars, trees
+// world.js — 2D Background Scene Renderer (Pixel Art)
+// Draws sky, ground, clouds, stars, trees, sun/moon
 // with day/night awareness
 // =============================================
 
@@ -34,7 +34,7 @@ export class World {
       this.clouds.push({
         x: Math.random() * w,
         y: Math.random() * (h * 0.4),
-        scale: 0.5 + Math.random() * 1.5,
+        scale: 2 + Math.floor(Math.random() * 3), // Pixel scale 2-4
         speed: 10 + Math.random() * 20
       });
     }
@@ -44,10 +44,9 @@ export class World {
     this.stars = [];
     for (let i = 0; i < 50; i++) {
       this.stars.push({
-        x: Math.random() * w,
-        y: Math.random() * (h * 0.6),
-        radius: 0.5 + Math.random() * 1.5,
-        alpha: Math.random(),
+        x: Math.floor(Math.random() * w),
+        y: Math.floor(Math.random() * (h * 0.6)),
+        color: Math.random() > 0.8 ? '#fcd34d' : '#ffffff',
         twinkleSpeed: 0.5 + Math.random() * 2,
         twinkleTime: Math.random() * Math.PI * 2
       });
@@ -60,8 +59,8 @@ export class World {
     const spacing = w / (numTrees + 1);
     for (let i = 0; i < numTrees; i++) {
       this.trees.push({
-        x: spacing * (i + 1) + (Math.random() * 40 - 20),
-        scale: 0.8 + Math.random() * 0.4
+        x: Math.floor(spacing * (i + 1) + (Math.random() * 40 - 20)),
+        scale: 3 + Math.floor(Math.random() * 2)
       });
     }
   }
@@ -80,7 +79,6 @@ export class World {
     // Animate stars
     for (const star of this.stars) {
       star.twinkleTime += star.twinkleSpeed * dt;
-      star.alpha = 0.5 + 0.5 * Math.sin(star.twinkleTime);
     }
   }
 
@@ -94,144 +92,149 @@ export class World {
     const d = new Date();
     const time = d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
 
+    // Disable smoothing for pixel art
+    ctx.imageSmoothingEnabled = false;
+
     // 1. Sky
-    const stops = this._getSkyGradientStops(time);
-    const grad = ctx.createLinearGradient(0, 0, 0, h * 0.8);
-    grad.addColorStop(0, stops.top);
-    grad.addColorStop(1, stops.bottom);
-    ctx.fillStyle = grad;
+    const skyColor = this._getSkyColor(time);
+    ctx.fillStyle = skyColor;
     ctx.fillRect(0, 0, w, h);
 
     // 2. Stars (visible mostly at night)
-    // Smooth alpha for stars
-    let starMasterAlpha = 0;
     if (time < 6 || time > 18) {
-      if (time > 18 && time <= 20) starMasterAlpha = (time - 18) / 2; // fade in dusk
-      else if (time >= 4 && time < 6) starMasterAlpha = 1 - (time - 4) / 2; // fade out dawn
-      else starMasterAlpha = 1; // full night
-    }
-    
-    if (starMasterAlpha > 0) {
-      this._drawStars(ctx, starMasterAlpha);
+      this._drawStars(ctx);
     }
 
-    // 3. Clouds
+    // 3. Sun/Moon
+    this._drawSunMoon(ctx, time, w, h);
+
+    // 4. Clouds
     this._drawClouds(ctx);
 
-    // 4. Ground (grass)
+    // 5. Ground (grass)
     this._drawGround(ctx, w, h);
 
-    // 5. Trees
+    // 6. Trees
     this._drawTrees(ctx, h);
   }
 
-  _drawStars(ctx, masterAlpha) {
-    ctx.fillStyle = 'white';
+  _drawStars(ctx) {
     for (const star of this.stars) {
-      ctx.globalAlpha = star.alpha * masterAlpha;
-      ctx.beginPath();
-      ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
-      ctx.fill();
+      const alpha = 0.5 + 0.5 * Math.sin(star.twinkleTime);
+      if (alpha > 0.4) {
+        ctx.fillStyle = star.color;
+        // Draw 2x2 pixel star
+        ctx.fillRect(star.x, star.y, 2, 2);
+      }
     }
-    ctx.globalAlpha = 1.0;
+  }
+
+  _drawSunMoon(ctx, time, w, h) {
+    // Basic orbit calculation
+    const cx = w / 2;
+    const cy = h * 0.8;
+    const radius = w * 0.4;
+    
+    // Day: 6 to 18
+    if (time >= 6 && time <= 18) {
+      const progress = (time - 6) / 12; // 0 to 1
+      const angle = Math.PI - (progress * Math.PI);
+      const sx = cx + Math.cos(angle) * radius;
+      const sy = cy - Math.sin(angle) * radius;
+      
+      // Draw pixel sun (square with rays)
+      ctx.fillStyle = '#fcd34d';
+      const size = 16;
+      ctx.fillRect(Math.floor(sx - size/2), Math.floor(sy - size/2), size, size);
+      // Rays
+      ctx.fillRect(Math.floor(sx - size/2 + 4), Math.floor(sy - size/2 - 4), 8, 4);
+      ctx.fillRect(Math.floor(sx - size/2 + 4), Math.floor(sy + size/2), 8, 4);
+      ctx.fillRect(Math.floor(sx - size/2 - 4), Math.floor(sy - size/2 + 4), 4, 8);
+      ctx.fillRect(Math.floor(sx + size/2), Math.floor(sy - size/2 + 4), 4, 8);
+    } 
+    // Night: 18 to 6
+    else {
+      let progress;
+      if (time > 18) progress = (time - 18) / 12;
+      else progress = (time + 6) / 12;
+      const angle = Math.PI - (progress * Math.PI);
+      const mx = cx + Math.cos(angle) * radius;
+      const my = cy - Math.sin(angle) * radius;
+      
+      // Draw pixel moon (crescent)
+      ctx.fillStyle = '#ffffff';
+      const size = 16;
+      ctx.fillRect(Math.floor(mx - size/2), Math.floor(my - size/2), size, size);
+      // Cutout to make crescent
+      ctx.fillStyle = this._getSkyColor(time);
+      ctx.fillRect(Math.floor(mx - size/2 + 4), Math.floor(my - size/2 - 2), size, size + 4);
+    }
   }
 
   _drawClouds(ctx) {
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.fillStyle = '#ffffff';
     for (const cloud of this.clouds) {
-      ctx.save();
-      ctx.translate(cloud.x, cloud.y);
-      ctx.scale(cloud.scale, cloud.scale);
+      const s = cloud.scale;
+      const x = Math.floor(cloud.x);
+      const y = Math.floor(cloud.y);
       
-      ctx.beginPath();
-      ctx.arc(0, 0, 20, Math.PI * 0.5, Math.PI * 1.5);
-      ctx.arc(25, -10, 25, Math.PI * 1, Math.PI * 1.8);
-      ctx.arc(55, -5, 20, Math.PI * 1.2, Math.PI * 2);
-      ctx.arc(60, 10, 15, Math.PI * 1.5, Math.PI * 0.5);
-      ctx.closePath();
-      ctx.fill();
-      
-      ctx.restore();
+      // Draw pixel cloud (3 overlapping rects)
+      ctx.fillRect(x, y, 20 * s, 10 * s);
+      ctx.fillRect(x + 5 * s, y - 6 * s, 10 * s, 6 * s);
+      ctx.fillRect(x - 5 * s, y + 4 * s, 30 * s, 6 * s);
     }
   }
 
   _drawGround(ctx, w, h) {
     const groundHeight = h * 0.35;
-    const groundY = h - groundHeight;
+    const groundY = Math.floor(h - groundHeight);
 
-    const grad = ctx.createLinearGradient(0, groundY, 0, h);
-    grad.addColorStop(0, '#2d4c1e');
-    grad.addColorStop(1, '#1a3011');
-
-    ctx.fillStyle = grad;
+    // Pixel grass strip
+    ctx.fillStyle = '#27523a'; // Dark green
     ctx.fillRect(0, groundY, w, groundHeight);
 
-    // Floor highlight
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-    ctx.beginPath();
-    ctx.ellipse(w / 2, groundY + 30, w * 0.8, 40, 0, 0, Math.PI * 2);
-    ctx.fill();
+    // Light green edge
+    ctx.fillStyle = '#3f7b4d';
+    ctx.fillRect(0, groundY, w, 8);
+    
+    // Pixel details on grass
+    ctx.fillStyle = '#1e3e2c';
+    for(let i = 0; i < w; i += 30) {
+      ctx.fillRect(i, groundY + 16, 4, 2);
+      ctx.fillRect(i + 15, groundY + 30, 2, 2);
+      ctx.fillRect(i + 5, groundY + 45, 6, 2);
+    }
   }
 
   _drawTrees(ctx, h) {
-    const groundY = h * 0.65;
+    const groundY = Math.floor(h * 0.65);
     for (const tree of this.trees) {
-      ctx.save();
-      ctx.translate(tree.x, groundY);
-      ctx.scale(tree.scale, tree.scale);
-
+      const s = tree.scale;
+      const tx = Math.floor(tree.x);
+      
       // Trunk
       ctx.fillStyle = '#4a3018';
-      ctx.fillRect(-10, -60, 20, 60);
+      ctx.fillRect(tx - 2 * s, groundY - 20 * s, 4 * s, 20 * s);
 
-      // Leaves
-      ctx.fillStyle = '#1e3c15';
-      ctx.beginPath();
-      ctx.arc(0, -80, 40, 0, Math.PI * 2);
-      ctx.fill();
+      // Leaves (stacked pixel rects)
+      ctx.fillStyle = '#1e3c15'; // Darker background leaves
+      ctx.fillRect(tx - 12 * s, groundY - 30 * s, 24 * s, 16 * s);
+      ctx.fillRect(tx - 8 * s, groundY - 40 * s, 16 * s, 10 * s);
 
-      ctx.fillStyle = '#2d5a1e';
-      ctx.beginPath();
-      ctx.arc(-20, -60, 30, 0, Math.PI * 2);
-      ctx.arc(20, -60, 30, 0, Math.PI * 2);
-      ctx.arc(0, -110, 35, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.restore();
+      ctx.fillStyle = '#2d5a1e'; // Lighter foreground leaves
+      ctx.fillRect(tx - 10 * s, groundY - 26 * s, 20 * s, 10 * s);
+      ctx.fillRect(tx - 6 * s, groundY - 34 * s, 12 * s, 8 * s);
+      ctx.fillRect(tx - 4 * s, groundY - 42 * s, 8 * s, 8 * s);
     }
   }
 
-  /** Gets smoothly interpolated sky colors based on time (0-24). */
-  _getSkyGradientStops(time) {
-    const phases = [
-      { t: 0,  top: [10, 10, 26], bottom: [26, 26, 58] },     // Midnight
-      { t: 5,  top: [26, 26, 58], bottom: [255, 126, 95] },   // Dawn start
-      { t: 8,  top: [79, 172, 254], bottom: [0, 242, 254] },  // Day
-      { t: 18, top: [79, 172, 254], bottom: [0, 242, 254] },  // Day end
-      { t: 20, top: [255, 126, 95], bottom: [47, 27, 65] },   // Dusk
-      { t: 22, top: [10, 10, 26], bottom: [26, 26, 58] },     // Night start
-      { t: 24, top: [10, 10, 26], bottom: [26, 26, 58] }      // Midnight
-    ];
-
-    let p1 = phases[0];
-    let p2 = phases[1];
-    
-    for (let i = 0; i < phases.length - 1; i++) {
-      if (time >= phases[i].t && time <= phases[i+1].t) {
-        p1 = phases[i];
-        p2 = phases[i+1];
-        break;
-      }
-    }
-
-    const range = p2.t - p1.t;
-    const progress = range === 0 ? 0 : (time - p1.t) / range;
-
-    const lerp = (c1, c2, p) => Math.round(c1 + (c2 - c1) * p);
-    
-    return {
-      top: \`rgb(\${lerp(p1.top[0], p2.top[0], progress)}, \${lerp(p1.top[1], p2.top[1], progress)}, \${lerp(p1.top[2], p2.top[2], progress)})\`,
-      bottom: \`rgb(\${lerp(p1.bottom[0], p2.bottom[0], progress)}, \${lerp(p1.bottom[1], p2.bottom[1], progress)}, \${lerp(p1.bottom[2], p2.bottom[2], progress)})\`
-    };
+  /** Gets flat sky color based on time. */
+  _getSkyColor(time) {
+    if (time >= 0 && time < 5) return '#1a1c2c'; // Midnight
+    if (time >= 5 && time < 8) return '#29366f'; // Dawn
+    if (time >= 8 && time < 17) return '#83c5be'; // Day
+    if (time >= 17 && time < 20) return '#d95763'; // Dusk
+    if (time >= 20 && time <= 24) return '#1a1c2c'; // Night
+    return '#83c5be';
   }
 }
