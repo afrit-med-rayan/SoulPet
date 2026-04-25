@@ -44,6 +44,15 @@ export class Game {
       this.emotions.penalizeNeglect(this.memory.days_ignored);
     }
 
+    // Apply offline fast-forward for time < 1 day (or on top of neglect)
+    if (save && save.saved_at) {
+      const offlineSeconds = (Date.now() - save.saved_at) / 1000;
+      if (offlineSeconds > 60) { // If offline for more than 1 minute
+        this.emotions.tick(offlineSeconds, new Date().getHours());
+        console.log(`[SoulPet] ⏱ Fast-forwarded ${Math.floor(offlineSeconds)}s of offline time`);
+      }
+    }
+
     // ── Rendering systems ─────────────────────────
     this.world = new World(this.ctx, this.canvas);
     this.pet   = new Pet(this.ctx, this.canvas, save?.petName ?? 'Pip');
