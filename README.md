@@ -4,6 +4,19 @@
 
 ---
 
+## 📸 Screenshots
+
+### The Welcome Experience
+![Welcome Modal](assets/welcome.png)
+
+### Dynamic UI & Pixel Canvas
+![Main UI](assets/main_ui.png)
+
+### Journal & Personality Tracking
+![Pet Journal](assets/journal.png)
+
+---
+
 ## ✨ Features
 
 | Feature | Details |
