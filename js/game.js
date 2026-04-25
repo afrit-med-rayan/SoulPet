@@ -142,7 +142,7 @@ export class Game {
       emotions:     this.emotions.toJSON(),
       memory:       this.memory.toJSON(),
       personality:  this.personality.toJSON(),
-      petState:     this.evolution.resolveState(this.emotions),
+      petState:     this.evolution.resolveState(this.emotions, this.memory),
       activeTraits: this.personality.getActiveTraits(),
       hourOfDay:    this.hourOfDay,
       dayPhase:     this.getDayPhase(),
@@ -254,7 +254,7 @@ export class Game {
     this._dispatchStateChange();
 
     console.log(
-      `[SoulPet] ⏱ Slow tick | mood: ${this.evolution.resolveState(this.emotions)} | phase: ${this.getDayPhase()}`
+      `[SoulPet] ⏱ Slow tick | mood: ${this.evolution.resolveState(this.emotions, this.memory)} | phase: ${this.getDayPhase()}`
     );
   }
 
@@ -295,7 +295,7 @@ export class Game {
     const lines = [
       `FPS: ${this._fps}`,
       `Phase: ${this.getDayPhase()} (${this.hourOfDay}h)`,
-      `State: ${this.evolution.resolveState(this.emotions)}`,
+      `State: ${this.evolution.resolveState(this.emotions, this.memory)}`,
       `Happy: ${snap.happiness.toFixed(1)}  Hunger: ${snap.hunger.toFixed(1)}`,
       `Energy: ${snap.energy.toFixed(1)}   Trust: ${snap.trust.toFixed(1)}`,
       `Lonely: ${snap.loneliness.toFixed(1)}  Curio: ${snap.curiosity.toFixed(1)}`,
@@ -312,7 +312,7 @@ export class Game {
   /** Re-resolve visual state and push to pet + personality. */
   _syncEvolution() {
     this.personality.update(this.emotions, this.memory);
-    const state = this.evolution.resolveState(this.emotions);
+    const state = this.evolution.resolveState(this.emotions, this.memory);
     this.pet.setState(state);
   }
 
