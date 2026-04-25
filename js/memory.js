@@ -100,6 +100,13 @@ export class MemorySystem {
     return Math.floor((Date.now() - this.first_met) / (1000 * 60 * 60 * 24));
   }
 
+  /** Calculate the pet's level based on interaction volume and lifespan. */
+  getLevel() {
+    const interactions = this.times_fed + this.times_played + this.times_talked + this.times_slept + this.times_cleaned;
+    const basePoints = this.getDaysAlive() + Math.floor(interactions / 5) + this.session_count;
+    return 1 + Math.floor(basePoints / 10);
+  }
+
   /** Formatted date string of first meeting. */
   getFirstMetDate() {
     return new Date(this.first_met).toLocaleDateString();

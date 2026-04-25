@@ -149,6 +149,10 @@ function updateUI(snapshot) {
   // Top bar
   if (petName) petNameDisplay.textContent = petName;
   dayCounter.textContent  = `Day ${(memory?.getDaysAlive?.() ?? 0) + 1}`;
+  const levelCounter = document.getElementById('level-counter');
+  if (levelCounter) {
+    levelCounter.textContent = `Lvl ${memory?.getLevel?.() ?? 1}`;
+  }
 
   // Day/night badge
   const phaseMap = {
