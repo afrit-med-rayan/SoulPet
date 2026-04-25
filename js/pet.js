@@ -113,15 +113,8 @@ export class Pet {
     if (this.state === 'sad' && Math.random() < 0.01) this.spawnParticles('tear');
     if (this.state === 'happy' && Math.random() < 0.02) this.spawnParticles('sparkle');
 
-    // 2. Wandering Logic
-    this.wanderTimer -= dt;
-    if (this.wanderTimer <= 0) {
-      this.wanderTimer = 3 + Math.random() * 5; // next wander in 3-8s
-      if (this.state !== 'sleepy') {
-        const margin = 50;
-        this.targetX = Math.floor(margin + Math.random() * (this.canvas.width - margin * 2));
-      }
-    }
+    // 2. Wandering logic is now handled by pet_ai.js
+    // We just execute the movement here
 
     // Move towards target (Pixel Snap)
     const dx = this.targetX - this.x;

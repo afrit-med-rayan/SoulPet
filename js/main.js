@@ -135,6 +135,10 @@ window.addEventListener('soulpet:statechange', e => {
   updateUI(e.detail);
 });
 
+window.addEventListener('soulpet:speech', e => {
+  showSpeechBubble(e.detail.text, e.detail.duration);
+});
+
 // ─────────────────────────────────────────────────
 //  UI Update Pipeline
 // ─────────────────────────────────────────────────
